@@ -1,14 +1,19 @@
 package play.modules.redis;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+import java.io.ObjectStreamClass;
+import java.util.HashMap;
+import java.util.Map;
+
 import play.Play;
 import play.cache.CacheImpl;
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisPool;
 import redis.clients.jedis.exceptions.JedisDataException;
-
-import java.io.*;
-import java.util.HashMap;
-import java.util.Map;
 
 /**
  * Play cache implementation using Redis.
@@ -18,38 +23,43 @@ import java.util.Map;
 public class RedisCacheImpl implements CacheImpl {
 
 	private static RedisCacheImpl uniqueInstance = new RedisCacheImpl();
-	
+
 	static JedisPool connectionPool;
-    static ThreadLocal<Jedis> cacheConnection = new ThreadLocal<Jedis>();
-	
-    private RedisCacheImpl() {  }
+	static ThreadLocal<Jedis> cacheConnection = new ThreadLocal<Jedis>();
 
-    static RedisCacheImpl getInstance() {
-        return uniqueInstance;
-    }
+	private RedisCacheImpl() {
+	}
 
-    public static Jedis getCacheConnection() {
-    	if (cacheConnection.get() != null) {
-    		return cacheConnection.get();
-    	}
-    	
-    	Jedis connection = connectionPool.getResource();
-    	cacheConnection.set(connection);
-    	return connection;
-    }
-    
-    public static void closeCacheConnection() {
-        if (cacheConnection.get() != null) {
-        	connectionPool.returnResource(cacheConnection.get());
-        	cacheConnection.remove();
-        }
-    }
-    
+	static RedisCacheImpl getInstance() {
+		return uniqueInstance;
+	}
+
+	public static Jedis getCacheConnection() {
+		if (cacheConnection.get() != null) {
+			return cacheConnection.get();
+		}
+
+		Jedis connection = connectionPool.getResource();
+		cacheConnection.set(connection);
+		return connection;
+	}
+
+	public static void closeCacheConnection() {
+		if (cacheConnection.get() != null) {
+			connectionPool.returnResource(cacheConnection.get());
+			cacheConnection.remove();
+		}
+	}
+
+	public static boolean isRedisCacheCleanOnStop() {
+		return Play.configuration.getProperty("redis.cache.onStop", "no").equals("clean");
+	}
+
 	@Override
 	public void add(String key, Object value, int expiration) {
 		if (!getCacheConnection().exists(key)) {
 			set(key, value, expiration);
-		}		
+		}
 	}
 
 	@Override
@@ -65,10 +75,10 @@ public class RedisCacheImpl implements CacheImpl {
 	@Override
 	public void set(String key, Object value, int expiration) {
 		Jedis jedis = getCacheConnection();
-		
-	    // Serialize to a byte array
+
+		// Serialize to a byte array
 		byte[] bytes = toByteArray(value);
-		
+
 		jedis.set(key.getBytes(), bytes);
 		jedis.expire(key, expiration);
 	}
@@ -76,8 +86,8 @@ public class RedisCacheImpl implements CacheImpl {
 	private static byte[] toByteArray(Object o) {
 		ObjectOutputStream out = null;
 		try {
-			ByteArrayOutputStream bos = new ByteArrayOutputStream() ;
-			out = new ObjectOutputStream(bos) ;
+			ByteArrayOutputStream bos = new ByteArrayOutputStream();
+			out = new ObjectOutputStream(bos);
 			out.writeObject(o);
 
 			return bos.toByteArray();
@@ -85,13 +95,14 @@ public class RedisCacheImpl implements CacheImpl {
 			throw new RuntimeException(e);
 		} finally {
 			try {
-				if (out != null) out.close();
+				if (out != null)
+					out.close();
 			} catch (IOException e2) {
 				throw new RuntimeException(e2);
 			}
 		}
 	}
-	
+
 	@Override
 	public boolean safeSet(String key, Object value, int expiration) {
 		try {
@@ -122,41 +133,42 @@ public class RedisCacheImpl implements CacheImpl {
 	@Override
 	public Object get(String key) {
 		byte[] bytes = getCacheConnection().get(key.getBytes());
-		if (bytes == null) return null;
+		if (bytes == null)
+			return null;
 
 		return fromByteArray(bytes);
 	}
 
 	private static Object fromByteArray(byte[] bytes) {
-		
+
 		ObjectInputStream in = null;
 		try {
 			in = new ObjectInputStream(new ByteArrayInputStream(bytes)) {
-               @Override
-                protected Class<?> resolveClass(ObjectStreamClass desc)
-                        throws IOException, ClassNotFoundException {
-                    return Class.forName(desc.getName(), false, Play.classloader);
-                }
-            };
+				@Override
+				protected Class<?> resolveClass(ObjectStreamClass desc) throws IOException, ClassNotFoundException {
+					return Class.forName(desc.getName(), false, Play.classloader);
+				}
+			};
 			return in.readObject();
 		} catch (Exception e) {
 			throw new RuntimeException(e);
 		} finally {
 			try {
-				if (in != null) in.close();
+				if (in != null)
+					in.close();
 			} catch (IOException e2) {
 				throw new RuntimeException(e2);
 			}
 		}
 	}
-	
+
 	@Override
 	public Map<String, Object> get(String[] keys) {
 		Map<String, Object> result = new HashMap<String, Object>(keys.length);
-        for (String key : keys) {
-            result.put(key, get(key));
-        }
-        return result;
+		for (String key : keys) {
+			result.put(key, get(key));
+		}
+		return result;
 	}
 
 	@Override
@@ -168,17 +180,17 @@ public class RedisCacheImpl implements CacheImpl {
 			getCacheConnection().set(key.getBytes(), toByteArray(newCacheValueLong));
 			sum = newCacheValueLong.longValue();
 		} else if (cacheValue instanceof Integer) {
-			Integer newCacheValueInteger = (Integer)cacheValue + by;
+			Integer newCacheValueInteger = (Integer) cacheValue + by;
 			getCacheConnection().set(key.getBytes(), toByteArray(newCacheValueInteger));
 			sum = newCacheValueInteger.longValue();
 		} else if (cacheValue instanceof Long) {
-			Long newCacheValueLong = (Long)cacheValue + by;
+			Long newCacheValueLong = (Long) cacheValue + by;
 			getCacheConnection().set(key.getBytes(), toByteArray(newCacheValueLong));
 			sum = newCacheValueLong.longValue();
 		} else {
 			throw new JedisDataException("Cannot incr on non-integer value (key: " + key + ")");
 		}
-		
+
 		return sum;
 	}
 
@@ -191,17 +203,17 @@ public class RedisCacheImpl implements CacheImpl {
 			getCacheConnection().set(key.getBytes(), toByteArray(newCacheValueLong));
 			difference = newCacheValueLong.longValue();
 		} else if (cacheValue instanceof Integer) {
-			Integer newCacheValueInteger = (Integer)cacheValue - by;
+			Integer newCacheValueInteger = (Integer) cacheValue - by;
 			getCacheConnection().set(key.getBytes(), toByteArray(newCacheValueInteger));
 			difference = newCacheValueInteger.longValue();
 		} else if (cacheValue instanceof Long) {
-			Long newCacheValueLong = (Long)cacheValue - by;
+			Long newCacheValueLong = (Long) cacheValue - by;
 			getCacheConnection().set(key.getBytes(), toByteArray(newCacheValueLong));
 			difference = newCacheValueLong.longValue();
 		} else {
 			throw new JedisDataException("Cannot decr on non-integer value (key: " + key + ")");
 		}
-		
+
 		return difference;
 	}
 
@@ -229,7 +241,9 @@ public class RedisCacheImpl implements CacheImpl {
 
 	@Override
 	public void stop() {
-		getCacheConnection().flushAll();
+		if (isRedisCacheCleanOnStop()) {
+			getCacheConnection().flushAll();
+		}
 		connectionPool.destroy();
 	}
 
