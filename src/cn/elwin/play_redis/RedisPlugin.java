@@ -1,4 +1,4 @@
-package cn.elwin.play.modules.redis;
+package cn.elwin.play_redis;
 
 import java.net.URI;
 import java.net.URISyntaxException;

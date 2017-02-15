@@ -5,8 +5,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 
-import cn.elwin.play.modules.redis.RedisCacheImpl;
-import cn.elwin.play.modules.redis.RedisPlugin;
+import cn.elwin.play_redis.RedisCacheImpl;
+import cn.elwin.play_redis.RedisPlugin;
 import play.cache.Cache;
 import play.mvc.Controller;
 

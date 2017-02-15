@@ -1,4 +1,4 @@
-package cn.elwin.play.modules.redis;
+package cn.elwin.play_redis;
 
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisPool;
