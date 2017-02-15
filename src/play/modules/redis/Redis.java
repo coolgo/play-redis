@@ -1,4 +1,4 @@
-package cn.elwin.play_redis;
+package play.modules.redis;
 
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.exceptions.JedisConnectionException;

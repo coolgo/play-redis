@@ -1,4 +1,4 @@
-package cn.elwin.play_redis;
+package play.modules.redis;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;

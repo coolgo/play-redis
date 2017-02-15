@@ -1,1 +1,1 @@
-66: cn.elwin.play_redis.RedisPlugin
+66: play.modules.redis.RedisPlugin
