@@ -1,1 +1,1 @@
-250: play.modules.redis.RedisPlugin
+250: cn.elwin.play.modules.redis.RedisPlugin

@@ -5,9 +5,9 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 
+import cn.elwin.play.modules.redis.RedisCacheImpl;
+import cn.elwin.play.modules.redis.RedisPlugin;
 import play.cache.Cache;
-import play.modules.redis.RedisCacheImpl;
-import play.modules.redis.RedisPlugin;
 import play.mvc.Controller;
 
 public class RedisCacheMonitor extends Controller {

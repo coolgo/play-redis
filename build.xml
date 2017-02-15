@@ -43,6 +43,7 @@
         <delete dir="tmp" />
         <delete dir="samples-and-tests/redis-cache/modules" />
         <delete dir="samples-and-tests/twayis/modules" />
+    	<delete dir="dis-lib/play-redis-${version}.jar" />
     </target>
 
 	
